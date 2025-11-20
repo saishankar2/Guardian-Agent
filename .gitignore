@@ -21,3 +21,6 @@ npm-debug.log*
 # Build artifacts
 build/
 coverage/
+
+
+service-key.json
