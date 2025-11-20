@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+dist/
+venv/
+__pycache__/
+*.pyc
+
+# Environment Variables (NEVER PUSH THESE)
+.env
+.env.local
+
+# IDE & System files
+.DS_Store
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Build artifacts
+build/
+coverage/
