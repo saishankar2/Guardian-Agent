@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guardian Zero-Trust | Enterprise AI Security</title>
-    <!-- Tailwind CSS for Modern Styling -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         
-        /* Custom Scrollbar for History */
+        /* Custom Scrollbar */
         .history-scroll::-webkit-scrollbar { width: 6px; }
         .history-scroll::-webkit-scrollbar-track { background: transparent; }
         .history-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
@@ -33,10 +33,11 @@
         .arrow-icon.rotate { transform: rotate(180deg); }
     </style>
 </head>
-<body class="text-slate-800 h-screen flex flex-col overflow-hidden">
+<!-- CHANGED: Removed h-screen and overflow-hidden to allow full page scrolling -->
+<body class="text-slate-800 min-h-screen flex flex-col">
 
     <!-- NAVBAR -->
-    <nav class="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-sm z-10">
+    <nav class="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
         <div class="flex items-center gap-3">
             <div class="bg-blue-600 text-white p-2 rounded-lg">
                 <i class="fa-solid fa-shield-halved text-xl"></i>
@@ -54,10 +55,12 @@
     </nav>
 
     <!-- MAIN LAYOUT -->
-    <div class="flex flex-1 overflow-hidden">
+    <!-- CHANGED: Changed h-screen to min-h-screen to allow vertical growth -->
+    <div class="flex flex-1 min-h-0">
         
         <!-- SIDEBAR (History) -->
-        <aside class="w-80 bg-white border-r border-slate-200 flex flex-col z-0">
+        <!-- CHANGED: Added sticky positioning so sidebar stays visible while scrolling -->
+        <aside class="w-80 bg-white border-r border-slate-200 flex flex-col z-0 h-[calc(100vh-73px)] sticky top-[73px] hidden md:flex">
             <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                 <h2 class="font-semibold text-slate-700 flex items-center gap-2">
                     <i class="fa-solid fa-clock-rotate-left text-slate-400"></i> Audit Log
@@ -67,15 +70,15 @@
                 </button>
             </div>
             <div id="historyList" class="flex-1 overflow-y-auto history-scroll p-2 space-y-2">
-                <!-- Dynamic History Items Injected Here -->
                 <div class="text-center text-slate-400 mt-10 text-sm">Loading history...</div>
             </div>
         </aside>
 
         <!-- WORKSPACE (Main Area) -->
-        <main class="flex-1 flex flex-col items-center justify-center bg-slate-50/50 relative overflow-y-auto p-8">
+        <!-- CHANGED: Added overflow-y-auto to the main content area specifically -->
+        <main class="flex-1 flex flex-col items-center justify-start bg-slate-50/50 p-8 overflow-y-auto">
             
-            <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+            <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden my-10">
                 <!-- Card Header -->
                 <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-8 text-white">
                     <h2 class="text-2xl font-bold mb-2">Analyze Document</h2>
@@ -124,6 +127,8 @@
 
     <!-- REPORT MODAL -->
     <div id="analysisModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        
+        <!-- Modal Card -->
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col modal-enter overflow-hidden">
             
             <!-- Modal Header (Sticky) -->
@@ -139,7 +144,7 @@
                 </button>
             </div>
 
-            <!-- Modal Content (Scrollable) -->
+            <!-- Modal Content (Scrollable Area) -->
             <div class="px-6 py-6 space-y-6 bg-slate-50/50 overflow-y-auto">
                 
                 <!-- Decrypted Report -->
@@ -186,7 +191,6 @@
                     <i class="fa-solid fa-database"></i> Logged in Firestore
                 </div>
                 <div class="flex gap-3">
-                    <!-- DOWNLOAD BUTTON -->
                     <button id="downloadBtn" class="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:text-sm items-center gap-2 transition-colors">
                         <i class="fa-solid fa-file-pdf"></i> Download Redacted Record
                     </button>
@@ -200,12 +204,11 @@
     </div>
 
     <script>
-        // UPDATE THIS IF DEPLOYED
-        const BACKEND_URL = 'http://localhost:3000';
+        // UPDATE THIS WITH YOUR DEPLOYED CLOUD RUN URL
+        const BACKEND_URL = 'https://guardian-brain-672931600086.us-central1.run.app';
 
         window.onload = loadHistory;
 
-        // --- UI HELPERS ---
         function setStatus(msg, type) {
             const el = document.getElementById('status');
             el.innerHTML = msg;
@@ -221,7 +224,6 @@
             document.getElementById('arrowIcon').classList.toggle('rotate');
         }
 
-        // --- CORE LOGIC ---
         async function loadHistory() {
             const list = document.getElementById('historyList');
             try {
@@ -268,14 +270,13 @@
             const secretsBody = document.getElementById('secretsBody');
             const downloadBtn = document.getElementById('downloadBtn');
 
-            // Reset UI
             document.getElementById('secretsContent').classList.remove('open');
             document.getElementById('arrowIcon').classList.remove('rotate');
 
             metaDiv.innerHTML = `<span class="font-medium text-slate-900">${item.fileName}</span> • <span class="italic">${item.question}</span>`;
             textDiv.innerText = item.full_analysis || item.final_analysis_snippet || "No detailed content.";
 
-            // Configure Download Button
+            // Handle Download Button Logic
             downloadBtn.onclick = () => window.open(`${BACKEND_URL}/download-redacted/${item.id}`, '_blank');
             if (!item.id) {
                 downloadBtn.disabled = true;
@@ -307,7 +308,11 @@
         }
 
         function closeModal() { document.getElementById('analysisModal').classList.add('hidden'); }
-        window.onclick = function(event) { if (event.target == document.getElementById('analysisModal')) closeModal(); }
+        
+        window.onclick = function(event) {
+            const modal = document.getElementById('analysisModal');
+            if (event.target == modal) closeModal();
+        }
 
         function resetUIForNewFile() {
             const fileInput = document.getElementById('fileInput');
@@ -362,7 +367,6 @@
 
                 await loadHistory();
                 
-                // Reset UI Logic
                 fileInput.value = ""; 
                 btn.innerText = "Analyze Another Document";
                 btn.className = "w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-slate-300 rounded-lg shadow-sm text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 transition-all duration-200";
