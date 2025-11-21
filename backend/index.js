@@ -41,9 +41,6 @@ function deterministicScrub(text) {
     const patterns = {
         EMAIL: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
         SSN: /\b\d{3}-\d{2}-\d{4}\b/g,
-        // UPDATED: More robust Phone Regex
-        // Matches +1 (404) 555-2378, 404-555-2378, etc.
-        // Handles spaces, dots, dashes, and non-breaking spaces (\u00A0)
         PHONE: /(?:\+|00)?(?:1|[\d]{1,3})?[\s\-\.\u00A0]*\(?\d{3}\)?[\s\-\.\u00A0]*\d{3}[\s\-\.\u00A0]*\d{4}/g
     };
     let clean = text;
@@ -119,8 +116,6 @@ app.post('/redact-document', upload.single('pdf'), async (req, res) => {
         if (!req.file) return res.status(400).send("No file uploaded.");
 
         const pdfData = await pdfParse(req.file.buffer);
-        // CRITICAL FIX: Remove invisible unicode control characters (Ltr/Rtl marks)
-        // This fixes "jumbled" text issues
         const originalText = pdfData.text.replace(/[\u200B-\u200F\u202A-\u202E]/g, "");
         
         const scrubbedText = deterministicScrub(originalText);
@@ -136,6 +131,7 @@ INSTRUCTIONS:
 2. [ID]: Redact SSNs, IDs, License Numbers.
 3. [ADDRESS]: Redact physical addresses.
 4. PRESERVE: Do not redact Dates, Case Numbers, or Dollar Amounts.
+5. Don't ask for any follow up questions.
 
 INPUT TEXT (Already partially scrubbed):
 "${scrubbedText.substring(0, 15000)}" 
@@ -175,7 +171,6 @@ app.post('/secure-analysis', upload.single('pdf'), async (req, res) => {
         console.log(`[Zero-Trust] Processing: ${req.file.originalname}`);
 
         const pdfData = await pdfParse(req.file.buffer);
-        // CRITICAL FIX: Sanitize Text here too
         const originalText = pdfData.text.replace(/[\u200B-\u200F\u202A-\u202E]/g, "");
         
         const userPrompt = req.body.userPrompt || "Summarize the key risks and events.";
@@ -192,7 +187,6 @@ app.post('/secure-analysis', upload.single('pdf'), async (req, res) => {
             TITLED_NAMES: /(?:Hon\.|Honorable|Judge|Justice|Mr\.|Ms\.|Dr\.|Prof\.)\s+[A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+/g,
             EMAILS: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
             SSNS: /\b\d{3}-\d{2}-\d{4}\b/g,
-            // UPDATED: Universal Phone Regex (Matches +1 (404) 555-2378)
             PHONES: /(?:\+|00)?(?:1|[\d]{1,3})?[\s\-\.\u00A0]*\(?\d{3}\)?[\s\-\.\u00A0]*\d{3}[\s\-\.\u00A0]*\d{4}/g
         };
 
@@ -240,6 +234,7 @@ app.post('/secure-analysis', upload.single('pdf'), async (req, res) => {
 Analyze this segment of a larger document.
 The text uses anonymous tokens like [ENTITY_1].
 Answer the user's question for THIS segment only.
+Don't ask for any follow up questions.
 
 USER QUESTION: "${userPrompt}"
 
