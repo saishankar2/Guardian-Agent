@@ -22,7 +22,7 @@
       * Manages the "Secret Map" (Tokens \<-\> Real Data).
       * Communicates with the GPU Service.
       * Stores metadata in Firestore.
-3.  **GPU Service (Docker)**: Hosts the `gemma:2b` LLM via Ollama to process the sanitized text.
+3.  **GPU Service (Docker)**: Hosts the `gemma:2` LLM via Ollama to process the sanitized text.
 
 ## 🚀 Getting Started
 
