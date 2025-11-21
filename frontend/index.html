@@ -3,198 +3,262 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guardian Agent</title>
+    <title>Guardian Zero-Trust | Enterprise AI Security</title>
+    <!-- Tailwind CSS for Modern Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 40px; text-align: center; }
-        .container { display: flex; gap: 30px; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         
-        .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 450px; min-height: 500px; }
-        h1 { color: #1a73e8; margin-bottom: 5px; }
-        .subtitle { color: #5f6368; margin-bottom: 30px; font-size: 0.9em; }
+        /* Custom Scrollbar for History */
+        .history-scroll::-webkit-scrollbar { width: 6px; }
+        .history-scroll::-webkit-scrollbar-track { background: transparent; }
+        .history-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
         
-        .history-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 350px; text-align: left; height: 540px; overflow-y: auto; }
-        
-        .history-item { border-bottom: 1px solid #eee; padding: 15px 0; font-size: 0.9em; cursor: pointer; transition: background 0.2s; }
-        .history-item:hover { background-color: #f9f9f9; padding-left: 5px; }
-        .history-item:last-child { border-bottom: none; }
-        .history-date { color: #999; font-size: 0.8em; margin-bottom: 4px; }
-        .history-file { font-weight: bold; color: #333; }
-        .history-q { color: #555; margin: 5px 0; font-style: italic; }
-        .history-badge { 
-            display: inline-block; 
-            background: #e6f4ea; 
-            color: #1e8e3e; 
-            padding: 2px 8px; 
-            border-radius: 12px; 
-            font-size: 0.75em; 
-            font-weight: bold; 
+        /* Animation for Modal */
+        .modal-enter { animation: modalFadeIn 0.2s ease-out forwards; }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
         }
 
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
-        
-        .modal-content { 
-            background-color: #fefefe; 
-            margin: 3% auto; 
-            padding: 25px; 
-            border: 1px solid #888; 
-            width: 70%; 
-            max-width: 900px; 
-            border-radius: 10px; 
-            text-align: left; 
-            max-height: 90vh; 
-            overflow-y: hidden; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 20px; 
-        }
-        
-        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; align-self: flex-end; }
-        
-        .modal-header { border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
-        
-        .report-section { background: #f9f9f9; padding: 15px; border-radius: 8px; border-left: 4px solid #1a73e8; max-height: 300px; overflow-y: auto; }
-        .report-text { white-space: pre-wrap; font-family: 'Georgia', serif; font-size: 1em; line-height: 1.6; color: #333; }
-        
-        .secrets-section { background: #fff0f0; padding: 0; border-radius: 8px; border-left: 4px solid #d93025; overflow: hidden; display: flex; flex-direction: column; }
-        
-        .secrets-header { padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #fff5f5; flex-shrink: 0; }
-        .secrets-header:hover { background: #ffeceb; }
-        
-        .secrets-title { color: #d93025; font-weight: bold; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px; margin: 0; }
-        .arrow { font-size: 0.8em; color: #d93025; transition: transform 0.3s; }
-        
-        .secrets-content { 
-            display: none; 
-            padding: 15px; 
-            border-top: 1px solid #fadbd8; 
-            max-height: 300px; 
-            overflow: auto;    
-        }
-        
-        .secrets-section.open .secrets-content { display: block; }
-        .secrets-section.open .arrow { transform: rotate(180deg); }
-
-        .secrets-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
-        .secrets-table th { text-align: left; padding: 5px; border-bottom: 1px solid #d93025; color: #d93025; position: sticky; top: 0; background: #fff0f0; z-index: 1; }
-        .secrets-table td { padding: 5px; border-bottom: 1px solid #eee; font-family: 'Courier New', monospace; }
-        .token { color: #1a73e8; font-weight: bold; }
-
-        .custom-file-upload { border: 2px dashed #ccc; display: block; padding: 30px 20px; cursor: pointer; border-radius: 8px; transition: 0.3s; background: #fafafa; margin-bottom: 20px; }
-        .custom-file-upload:hover { background: #e8f0fe; border-color: #1a73e8; }
-        input[type="file"] { display: none; }
-        .input-group { margin-top: 20px; text-align: left; }
-        input[type="text"] { width: 94%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
-        button { background: #1a73e8; color: white; border: none; padding: 15px 24px; border-radius: 6px; font-size: 16px; cursor: pointer; margin-top: 25px; width: 100%; transition: 0.2s; font-weight: bold; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        #status { margin-top: 20px; font-weight: bold; min-height: 20px; font-size: 14px; }
-        .processing { color: #e67c00; animation: pulse 1.5s infinite; }
-        .success { color: green; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        /* Secret Accordion Animation */
+        .secrets-content { transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out; max-height: 0; opacity: 0; overflow: hidden; }
+        .secrets-content.open { max-height: 500px; opacity: 1; }
+        .arrow-icon { transition: transform 0.3s ease; }
+        .arrow-icon.rotate { transform: rotate(180deg); }
     </style>
 </head>
-<body>
+<body class="text-slate-800 h-screen flex flex-col overflow-hidden">
 
-    <div class="container">
-        <div class="card">
-            <h1>🛡️ Guardian Agent</h1>
-            <p class="subtitle">Blind AI Analysis • Local Re-Identification</p>
+    <!-- NAVBAR -->
+    <nav class="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-sm z-10">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 text-white p-2 rounded-lg">
+                <i class="fa-solid fa-shield-halved text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-slate-900 tracking-tight">Guardian<span class="text-blue-600">Agent</span></h1>
+                <p class="text-xs text-slate-500 font-medium tracking-wide">ZERO-TRUST AI PIPELINE</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold border border-green-200">
+                <i class="fa-solid fa-lock mr-1"></i> ENCLAVE SECURE
+            </span>
+        </div>
+    </nav>
+
+    <!-- MAIN LAYOUT -->
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- SIDEBAR (History) -->
+        <aside class="w-80 bg-white border-r border-slate-200 flex flex-col z-0">
+            <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                <h2 class="font-semibold text-slate-700 flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-slate-400"></i> Audit Log
+                </h2>
+                <button onclick="loadHistory()" class="text-blue-600 hover:text-blue-800 text-sm font-medium hover:bg-blue-50 px-2 py-1 rounded transition">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                </button>
+            </div>
+            <div id="historyList" class="flex-1 overflow-y-auto history-scroll p-2 space-y-2">
+                <!-- Dynamic History Items Injected Here -->
+                <div class="text-center text-slate-400 mt-10 text-sm">Loading history...</div>
+            </div>
+        </aside>
+
+        <!-- WORKSPACE (Main Area) -->
+        <main class="flex-1 flex flex-col items-center justify-center bg-slate-50/50 relative overflow-y-auto p-8">
             
-            <label for="fileInput" class="custom-file-upload">
-                <span id="fileLabel">📂 Click to Select Confidential PDF</span>
-            </label>
-            <input id="fileInput" type="file" accept=".pdf" onchange="resetUIForNewFile()" />
-            
-            <div class="input-group">
-                <label>Ask the Secure AI:</label>
-                <input type="text" id="userPrompt" placeholder="e.g., Summarize the liability clauses..." value="Summarize the key risks and events.">
+            <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+                <!-- Card Header -->
+                <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-8 text-white">
+                    <h2 class="text-2xl font-bold mb-2">Analyze Document</h2>
+                    <p class="text-slate-300 text-sm">Upload a PDF. We will strip PII locally before sending it to the Cloud AI.</p>
+                </div>
+
+                <div class="p-8 space-y-6">
+                    <!-- File Upload Zone -->
+                    <div class="relative group">
+                        <input id="fileInput" type="file" accept=".pdf" onchange="resetUIForNewFile()" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                        <div id="uploadZone" class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center transition-all duration-200 group-hover:border-blue-500 group-hover:bg-blue-50/50">
+                            <div class="mb-3">
+                                <i class="fa-regular fa-file-pdf text-4xl text-slate-400 group-hover:text-blue-500 transition-colors"></i>
+                            </div>
+                            <h3 id="fileLabel" class="text-lg font-medium text-slate-700 group-hover:text-blue-700">Click to select a PDF</h3>
+                            <p class="text-sm text-slate-500">Maximum file size 10MB</p>
+                        </div>
+                    </div>
+
+                    <!-- Prompt Input -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Analyst Question</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
+                            </div>
+                            <input type="text" id="userPrompt" 
+                                class="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition" 
+                                placeholder="e.g., Summarize the liability clauses..." value="Summarize the key risks and events.">
+                        </div>
+                    </div>
+
+                    <!-- Action Button -->
+                    <button id="btn" onclick="processFile()" disabled 
+                        class="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-slate-300 cursor-not-allowed transition-all duration-200">
+                        Select a file first
+                    </button>
+
+                    <!-- Status -->
+                    <div id="status" class="text-center text-sm font-medium min-h-[20px]"></div>
+                </div>
             </div>
 
-            <button id="btn" onclick="processFile()" disabled>Select a file first</button>
-            <div id="status"></div>
-        </div>
-
-        <div class="history-card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:2px solid #f0f2f5; padding-bottom:10px;">
-                <h3 style="margin:0; color: #1a73e8;">🗄️ Summary Log</h3>
-                <button onclick="loadHistory()" style="width:auto; margin:0; padding: 5px 10px; font-size: 12px; background:#eee; color:#333; border-radius:4px; cursor:pointer; border:1px solid #ccc;">↻ Refresh</button>
-            </div>
-            <div id="historyList" style="text-align: center; color: #888; padding-top: 20px;">Loading...</div>
-        </div>
+        </main>
     </div>
 
-    <div id="analysisModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
+    <!-- REPORT MODAL -->
+    <div id="analysisModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col modal-enter overflow-hidden">
             
-            <div class="modal-header">
-                <h2 style="margin:0; color: #1a73e8;">📄 Full Analysis Report</h2>
-                <div id="modalMetaData" style="margin-top:5px; font-size:0.9em; color:#666;"></div>
-            </div>
-
-            <div class="report-section">
-                <h4 style="margin-top:0;">🧠 AI Insight (Decrypted)</h4>
-                <div id="modalText" class="report-text"></div>
-            </div>
-
-            <div class="secrets-section">
-                <div class="secrets-header" onclick="toggleSecrets()">
-                    <div class="secrets-title">🔒 Privacy Vault: Data Hidden from Cloud AI</div>
-                    <span class="arrow">▼</span>
+            <!-- Modal Header (Sticky) -->
+            <div class="bg-white px-6 py-4 border-b border-slate-200 flex justify-between items-start shrink-0">
+                <div>
+                    <h3 class="text-lg leading-6 font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-file-shield text-blue-600"></i> Analysis Report
+                    </h3>
+                    <div id="modalMetaData" class="mt-1 text-sm text-slate-500"></div>
                 </div>
+                <button type="button" onclick="closeModal()" class="bg-white rounded-md text-slate-400 hover:text-slate-500 focus:outline-none">
+                    <i class="fa-solid fa-xmark text-2xl"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content (Scrollable) -->
+            <div class="px-6 py-6 space-y-6 bg-slate-50/50 overflow-y-auto">
                 
-                <div class="secrets-content">
-                    <p style="font-size:0.8em; color:#555; margin-top:0;">The Cloud AI only received the blue tokens. The real data below <b>never left this server</b>.</p>
-                    <table class="secrets-table">
-                        <thead>
-                            <tr>
-                                <th>Token Sent to Cloud</th>
-                                <th>Real Data (Kept Local)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="secretsBody">
-                        </tbody>
-                    </table>
+                <!-- Decrypted Report -->
+                <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+                    <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-brain text-purple-600"></i> AI Insight (Decrypted Locally)
+                    </h4>
+                    <div id="modalText" class="prose prose-sm max-w-none text-slate-700 font-serif leading-relaxed whitespace-pre-wrap bg-slate-50 p-4 rounded border border-slate-100"></div>
+                </div>
+
+                <!-- Secrets Vault (Accordion) -->
+                <div class="bg-red-50 rounded-lg border border-red-100 overflow-hidden">
+                    <button onclick="toggleSecrets()" class="w-full px-6 py-4 flex justify-between items-center bg-red-50 hover:bg-red-100 transition-colors text-left focus:outline-none">
+                        <div>
+                            <h4 class="text-sm font-bold text-red-800 uppercase tracking-wide flex items-center gap-2">
+                                <i class="fa-solid fa-user-secret"></i> Privacy Vault
+                            </h4>
+                            <p class="text-xs text-red-600 mt-1">Data hidden from Cloud AI (Only tokens were sent)</p>
+                        </div>
+                        <i id="arrowIcon" class="fa-solid fa-chevron-down text-red-400 arrow-icon"></i>
+                    </button>
+                    
+                    <div id="secretsContent" class="secrets-content border-t border-red-100 bg-white">
+                        <div class="max-h-64 overflow-y-auto">
+                            <table class="min-w-full divide-y divide-slate-200 text-sm">
+                                <thead class="bg-slate-50 sticky top-0">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left font-bold text-slate-500 uppercase tracking-wider">Token</th>
+                                        <th class="px-6 py-3 text-left font-bold text-red-600 uppercase tracking-wider">Real Data (Local)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="secretsBody" class="bg-white divide-y divide-slate-100">
+                                    <!-- Secrets injected here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
 
+            <!-- Modal Footer (Sticky) -->
+            <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 shrink-0 flex justify-between items-center">
+                <div class="text-xs text-slate-400 font-medium flex items-center gap-2">
+                    <i class="fa-solid fa-database"></i> Logged in Firestore
+                </div>
+                <div class="flex gap-3">
+                    <!-- DOWNLOAD BUTTON -->
+                    <button id="downloadBtn" class="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:text-sm items-center gap-2 transition-colors">
+                        <i class="fa-solid fa-file-pdf"></i> Download Redacted Record
+                    </button>
+                    
+                    <button type="button" onclick="closeModal()" class="inline-flex justify-center rounded-md border border-slate-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 sm:text-sm">
+                        Close
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
+        // UPDATE THIS IF DEPLOYED
         const BACKEND_URL = 'http://localhost:3000';
+
         window.onload = loadHistory;
 
+        // --- UI HELPERS ---
+        function setStatus(msg, type) {
+            const el = document.getElementById('status');
+            el.innerHTML = msg;
+            el.className = `text-center text-sm font-medium min-h-[20px] mt-4 ${
+                type === 'loading' ? 'text-amber-600 animate-pulse' :
+                type === 'success' ? 'text-green-600' :
+                type === 'error' ? 'text-red-600' : 'text-slate-500'
+            }`;
+        }
+
+        function toggleSecrets() {
+            document.getElementById('secretsContent').classList.toggle('open');
+            document.getElementById('arrowIcon').classList.toggle('rotate');
+        }
+
+        // --- CORE LOGIC ---
         async function loadHistory() {
+            const list = document.getElementById('historyList');
             try {
                 const res = await fetch(`${BACKEND_URL}/history`);
                 const data = await res.json();
-                const list = document.getElementById('historyList');
-                list.innerHTML = data.length ? "" : "No audits found.";
+                
+                if (data.length === 0) {
+                    list.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm">No audit logs found.</div>`;
+                    return;
+                }
+
+                list.innerHTML = ""; 
                 
                 data.forEach(item => {
                     const div = document.createElement('div');
-                    div.className = 'history-item';
-                    div.title = "Click to view full report";
+                    div.className = "p-3 rounded-lg border border-transparent hover:border-blue-200 hover:bg-blue-50 cursor-pointer transition-all group";
                     div.onclick = () => openModal(item);
 
-                    const date = new Date(item.timestamp).toLocaleDateString() + " " + new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    const date = new Date(item.timestamp).toLocaleDateString(undefined, { month:'short', day:'numeric' });
+                    const time = new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
                     div.innerHTML = `
-                        <div class="history-date">${date}</div>
-                        <div class="history-file">📄 ${item.fileName}</div>
-                        <div class="history-q">"${item.question}"</div>
-                        <div class="history-badge">🛡️ ${item.entities_protected} Identities Secured</div>
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="text-xs font-bold text-slate-500">${date} • ${time}</span>
+                            <span class="text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-bold border border-green-200">
+                                <i class="fa-solid fa-shield-cat"></i> ${item.entities_protected}
+                            </span>
+                        </div>
+                        <div class="font-semibold text-slate-800 text-sm truncate group-hover:text-blue-700">${item.fileName}</div>
+                        <div class="text-xs text-slate-500 truncate mt-1">"${item.question}"</div>
                     `;
                     list.appendChild(div);
                 });
             } catch (e) {
                 console.error("Failed to load history", e);
+                list.innerHTML = `<div class="text-center py-4 text-red-400 text-xs">Connection Failed</div>`;
             }
-        }
-
-        function toggleSecrets() {
-            const section = document.querySelector('.secrets-section');
-            section.classList.toggle('open');
         }
 
         function openModal(item) {
@@ -202,11 +266,24 @@
             const textDiv = document.getElementById('modalText');
             const metaDiv = document.getElementById('modalMetaData');
             const secretsBody = document.getElementById('secretsBody');
-            
-            document.querySelector('.secrets-section').classList.remove('open');
+            const downloadBtn = document.getElementById('downloadBtn');
 
-            metaDiv.innerHTML = `<strong>File:</strong> ${item.fileName} | <strong>Question:</strong> ${item.question}`;
+            // Reset UI
+            document.getElementById('secretsContent').classList.remove('open');
+            document.getElementById('arrowIcon').classList.remove('rotate');
+
+            metaDiv.innerHTML = `<span class="font-medium text-slate-900">${item.fileName}</span> • <span class="italic">${item.question}</span>`;
             textDiv.innerText = item.full_analysis || item.final_analysis_snippet || "No detailed content.";
+
+            // Configure Download Button
+            downloadBtn.onclick = () => window.open(`${BACKEND_URL}/download-redacted/${item.id}`, '_blank');
+            if (!item.id) {
+                downloadBtn.disabled = true;
+                downloadBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                downloadBtn.disabled = false;
+                downloadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
 
             const map = item.encrypted_entities || item.secret_map || {};
             const keys = Object.keys(map);
@@ -214,28 +291,40 @@
             secretsBody.innerHTML = ""; 
             
             if (keys.length === 0) {
-                secretsBody.innerHTML = "<tr><td colspan='2' style='text-align:center; color:#666; padding:15px;'>No PII detected or cached.</td></tr>";
+                secretsBody.innerHTML = "<tr><td colspan='2' class='px-6 py-4 text-center text-slate-400 italic'>No PII detected or cached.</td></tr>";
             } else {
                 keys.forEach(token => {
-                    const row = `<tr><td class="token">${token}</td><td>${map[token]}</td></tr>`;
+                    const row = `
+                        <tr class="hover:bg-red-50/50 transition-colors">
+                            <td class="px-6 py-2 text-blue-600 font-mono text-xs font-bold border-b border-slate-100">${token}</td>
+                            <td class="px-6 py-2 text-slate-700 font-mono text-xs border-b border-slate-100">${map[token]}</td>
+                        </tr>`;
                     secretsBody.innerHTML += row;
                 });
             }
 
-            modal.style.display = "block";
+            modal.classList.remove('hidden');
         }
 
-        function closeModal() { document.getElementById('analysisModal').style.display = "none"; }
+        function closeModal() { document.getElementById('analysisModal').classList.add('hidden'); }
         window.onclick = function(event) { if (event.target == document.getElementById('analysisModal')) closeModal(); }
 
         function resetUIForNewFile() {
             const fileInput = document.getElementById('fileInput');
+            const uploadZone = document.getElementById('uploadZone');
+            const fileLabel = document.getElementById('fileLabel');
+            const btn = document.getElementById('btn');
+
             if(fileInput.files.length > 0) {
-                document.getElementById('fileLabel').innerText = "📄 " + fileInput.files[0].name;
-                document.getElementById('fileLabel').style.fontWeight = "bold";
-                document.getElementById('btn').disabled = false;
-                document.getElementById('btn').innerText = "🔒 Run Blind Analysis";
-                document.getElementById('status').innerText = "";
+                fileLabel.innerHTML = `<span class="text-slate-800 font-bold">${fileInput.files[0].name}</span>`;
+                uploadZone.classList.add('border-blue-500', 'bg-blue-50/30');
+                uploadZone.classList.remove('border-slate-300');
+                
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-lock"></i> Run Secure Analysis`;
+                btn.className = "w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-lg shadow-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200";
+                
+                setStatus("", "default");
             }
         }
 
@@ -243,14 +332,13 @@
             const fileInput = document.getElementById('fileInput');
             const userPrompt = document.getElementById('userPrompt').value;
             const file = fileInput.files[0];
-            
             const btn = document.getElementById('btn');
-            const status = document.getElementById('status');
             
+            if (!file) return;
+
             btn.disabled = true;
-            btn.innerText = "Processing...";
-            status.innerText = "⏳ Tokenizing & Analyzing (This may take 30s)...";
-            status.className = "processing";
+            btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Processing Securely...`;
+            setStatus("Tokenizing Identities on Local CPU...", "loading");
 
             const formData = new FormData();
             formData.append('pdf', file);
@@ -262,10 +350,10 @@
 
                 const result = await response.json();
 
-                status.innerText = "✅ Success! Report Ready.";
-                status.className = "success";
+                setStatus("Success! Report Decrypted.", "success");
                 
                 openModal({
+                    id: result.id,
                     fileName: file.name,
                     question: userPrompt,
                     full_analysis: result.final_analysis,
@@ -274,20 +362,26 @@
 
                 await loadHistory();
                 
+                // Reset UI Logic
                 fileInput.value = ""; 
                 btn.innerText = "Analyze Another Document";
+                btn.className = "w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-slate-300 rounded-lg shadow-sm text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 transition-all duration-200";
+                
+                const uploadZone = document.getElementById('uploadZone');
+                document.getElementById('fileLabel').innerText = "Click to select a PDF";
+                uploadZone.classList.remove('border-blue-500', 'bg-blue-50/30');
+                uploadZone.classList.add('border-slate-300');
+
                 setTimeout(() => {
-                    btn.disabled = true;
-                    document.getElementById('fileLabel').innerText = "📂 Click to Select Confidential PDF";
-                    document.getElementById('fileLabel').style.fontWeight = "normal";
-                }, 2000);
+                   if(fileInput.files.length === 0) btn.disabled = true; 
+                }, 100);
 
             } catch (error) {
                 console.error(error);
-                status.innerText = "❌ Error: " + error.message;
-                status.className = "error";
+                setStatus("Error: " + error.message, "error");
                 btn.disabled = false;
                 btn.innerText = "Try Again";
+                btn.className = "w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-all duration-200";
             }
         }
     </script>

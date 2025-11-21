@@ -41,7 +41,10 @@ function deterministicScrub(text) {
     const patterns = {
         EMAIL: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
         SSN: /\b\d{3}-\d{2}-\d{4}\b/g,
-        PHONE: /(?:\+?1[-. ]?)?\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})/g
+        // UPDATED: More robust Phone Regex
+        // Matches +1 (404) 555-2378, 404-555-2378, etc.
+        // Handles spaces, dots, dashes, and non-breaking spaces (\u00A0)
+        PHONE: /(?:\+|00)?(?:1|[\d]{1,3})?[\s\-\.\u00A0]*\(?\d{3}\)?[\s\-\.\u00A0]*\d{3}[\s\-\.\u00A0]*\d{4}/g
     };
     let clean = text;
     clean = clean.replace(patterns.EMAIL, '[REDACTED_EMAIL]');
@@ -68,12 +71,58 @@ app.get('/history', async (req, res) => {
     }
 });
 
+app.get('/download-redacted/:id', async (req, res) => {
+    try {
+        const docId = req.params.id;
+        const docRef = await db.collection('analysis_history').doc(docId).get();
+
+        if (!docRef.exists) {
+            return res.status(404).send("Document not found");
+        }
+
+        const data = docRef.data();
+        const redactedContent = data.redacted_text_content || "No redacted content stored.";
+
+        const doc = new PDFDocument();
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=REDACTED_${data.fileName || 'document'}.pdf`);
+        doc.pipe(res);
+
+        doc.fontSize(18).fillColor('#d93025').text('CONFIDENTIAL - REDACTED COPY', { align: 'center' });
+        doc.moveDown();
+        doc.fontSize(10).fillColor('#000000').text(`Original File: ${data.fileName}`);
+        doc.text(`Scan ID: ${docId}`);
+        doc.text(`Date: ${new Date(data.timestamp).toLocaleString()}`);
+        doc.moveDown();
+        
+        doc.save(); 
+        doc.rect(50, doc.y, 500, 2).fill('#eeeeee');
+        doc.restore(); 
+        doc.moveDown();
+        
+        doc.fillColor('#000000')
+           .fillOpacity(1)
+           .font('Helvetica')
+           .fontSize(11)
+           .text(redactedContent);
+        
+        doc.end();
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Error generating download: " + error.message);
+    }
+});
+
 app.post('/redact-document', upload.single('pdf'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).send("No file uploaded.");
 
         const pdfData = await pdfParse(req.file.buffer);
-        const originalText = pdfData.text;
+        // CRITICAL FIX: Remove invisible unicode control characters (Ltr/Rtl marks)
+        // This fixes "jumbled" text issues
+        const originalText = pdfData.text.replace(/[\u200B-\u200F\u202A-\u202E]/g, "");
+        
         const scrubbedText = deterministicScrub(originalText);
 
         const gpuResponse = await axios.post(`${GPU_URL}/api/generate`, {
@@ -110,7 +159,7 @@ OUTPUT (Full text with redactions):`,
         doc.rect(50, doc.y, 500, 2).fill('#eee');
         doc.moveDown();
         
-        doc.font('Courier').fontSize(11).text(finalText);
+        doc.fillColor('black').font('Courier').fontSize(11).text(finalText);
         
         doc.end();
 
@@ -126,7 +175,9 @@ app.post('/secure-analysis', upload.single('pdf'), async (req, res) => {
         console.log(`[Zero-Trust] Processing: ${req.file.originalname}`);
 
         const pdfData = await pdfParse(req.file.buffer);
-        const originalText = pdfData.text;
+        // CRITICAL FIX: Sanitize Text here too
+        const originalText = pdfData.text.replace(/[\u200B-\u200F\u202A-\u202E]/g, "");
+        
         const userPrompt = req.body.userPrompt || "Summarize the key risks and events.";
 
         console.log("⚡ STARTING LOCAL CPU EXTRACTION (True Zero-Trust)...");
@@ -137,9 +188,34 @@ app.post('/secure-analysis', upload.single('pdf'), async (req, res) => {
         const orgs = doc.organizations().out('array');
         const titleMatches = originalText.match(/(?:Hon\.|Honorable|Judge|Justice|Mr\.|Ms\.|Dr\.|Prof\.)\s+[A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+/g) || [];
         
-        const allEntities = [...new Set([...people, ...orgs, ...titleMatches])].filter(e => e.length > 2);
+        const Patterns = {
+            TITLED_NAMES: /(?:Hon\.|Honorable|Judge|Justice|Mr\.|Ms\.|Dr\.|Prof\.)\s+[A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+/g,
+            EMAILS: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
+            SSNS: /\b\d{3}-\d{2}-\d{4}\b/g,
+            // UPDATED: Universal Phone Regex (Matches +1 (404) 555-2378)
+            PHONES: /(?:\+|00)?(?:1|[\d]{1,3})?[\s\-\.\u00A0]*\(?\d{3}\)?[\s\-\.\u00A0]*\d{3}[\s\-\.\u00A0]*\d{4}/g
+        };
+
+        const titleMatches2 = originalText.match(Patterns.TITLED_NAMES) || [];
+        const emailMatches = originalText.match(Patterns.EMAILS) || [];
+        const phoneMatches = originalText.match(Patterns.PHONES) || [];
+        const ssnMatches = originalText.match(Patterns.SSNS) || [];
+
+        const allEntities = [
+            ...new Set([
+                ...titleMatches,
+                ...titleMatches2,
+                ...emailMatches,
+                ...phoneMatches,
+                ...ssnMatches,
+                ...people,
+                ...orgs
+            ])
+        ];
         
-        allEntities.sort((a, b) => b.length - a.length);
+        const validEntities = allEntities.filter(e => e.length > 2);
+        
+        validEntities.sort((a, b) => b.length - a.length);
 
         let tokenizedText = originalText;
         let secretMap = {}; 
@@ -188,12 +264,13 @@ ANALYSIS:`,
             revealedAnalysis = revealedAnalysis.replace(new RegExp(safeToken, 'g'), secretMap[token]);
         });
 
-        await db.collection('analysis_history').add({
+        const docRef = await db.collection('analysis_history').add({
             timestamp: new Date().toISOString(),
             fileName: req.file.originalname,
             question: userPrompt,
             blind_analysis_snippet: finalSummary.substring(0, 200) + "...",
             full_analysis: revealedAnalysis,
+            redacted_text_content: tokenizedText,
             encrypted_entities: secretMap, 
             entities_protected: Object.keys(secretMap).length
         });
@@ -201,6 +278,7 @@ ANALYSIS:`,
 
         res.json({
             success: true,
+            id: docRef.id,
             blind_analysis: finalSummary,
             final_analysis: revealedAnalysis,
             encrypted_entities: secretMap, 
